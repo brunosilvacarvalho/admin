@@ -1,30 +1,45 @@
-import type { NextPage } from 'next'
-import Head from 'next/head'
-
-import { BsMoon, BsSearch } from 'react-icons/bs';
-import { VscBell } from 'react-icons/vsc';
-import { FcMenu } from 'react-icons/fc';
-import { MdArrowForwardIos, MdInsertChartOutlined, MdOpacity, MdOutlineSpaceDashboard, MdWeb } from 'react-icons/md';
-import { SiDatabricks } from 'react-icons/si';
-import { GiPlainCircle } from 'react-icons/gi';
-import React, { MouseEventHandler, useState } from "react";
+import { useRouter } from 'next/router'
+import Head from "next/head";
+import { FcMenu } from "react-icons/fc";
+import { BsMoon, BsSearch } from "react-icons/bs";
+import { VscBell } from "react-icons/vsc";
+import { MdArrowForwardIos, MdInsertChartOutlined, MdOpacity, MdOutlineSpaceDashboard, MdWeb } from "react-icons/md";
+import { SiDatabricks } from "react-icons/si";
+import { GiPlainCircle } from "react-icons/gi";
+import React, { MouseEventHandler, useEffect, useState } from "react";
 import { IconType } from "react-icons";
-import Link from 'next/link';
+import Link from "next/link";
 
-type IMenuItem = {
-  id?: number;
-  icon: IconType;
+type ISubMenuItem = {
+  slug: string;
   description: string;
   href: string;
-  isSelected?: boolean;
-  onClick: MouseEventHandler;
 }
 
-const MenuItem: React.FC<IMenuItem> = ({ icon, description, href, isSelected, onClick }) => {
-  let baseClass = "flex flex-row w-full items-center justify-start px-8 py-3";
-  baseClass = isSelected
+type IMenuItem = {
+  icon: IconType;
+  slug: string;
+  description: string;
+  href: string;
+}
+
+type IDropdownMenuItem = {
+  icon: IconType;
+  slug: string;
+  description: string;
+  dropdown: ISubMenuItem[]
+}
+
+
+const MenuItem: React.FC<IMenuItem> = ({ icon, slug, description, href }) => {
+  const router = useRouter()
+  const { page } = router.query
+
+  let baseClass = "select-none cursor-pointer flex flex-row w-full items-center justify-start px-8 py-3";
+  baseClass = page === slug
     ? baseClass + " text-blue-900 bg-white bg-white rounded-br-[20px] rounded-tr-[20px] font-bold"
     : baseClass + " hover:bg-white hover:rounded-br-[20px] hover:rounded-tr-[20px]";
+
   return (
     <Link href={ href }>
       <span className={ baseClass }>
@@ -36,13 +51,65 @@ const MenuItem: React.FC<IMenuItem> = ({ icon, description, href, isSelected, on
   );
 }
 
-const Home: NextPage = () => {
-  const [selectedKey, setSelectedKey] = useState(0);
-  const selectMenuItem = (key: number) => {
-    if (key !== selectedKey) {
-      setSelectedKey(key)
+const DropdownMenuItem: React.FC<IDropdownMenuItem> = ({ icon, slug, description, dropdown = [] }) => {
+  const router = useRouter();
+  const { page } = router.query;
+  const [isFolded, setIsFolded] = useState(true);
+  const isSelected = (dropdown.filter(e => e.slug === page).length > 0);
+  useEffect(() => {
+    if (!isSelected) {
+      setIsFolded(true)
+    } else {
+      setIsFolded(false)
     }
+  }, [router.query.page])
+  let baseClass = "select-none cursor-pointer flex flex-row w-full items-center justify-start px-8 py-3";
+  baseClass += !isFolded || isSelected
+    ? " text-blue-900 bg-white bg-white rounded-tr-[20px]"
+    : " hover:bg-white hover:rounded-br-[20px] hover:rounded-tr-[20px]";
+  baseClass += isSelected ? " font-bold" : "";
+  baseClass += isSelected && isFolded ? " rounded-br-[20px]" : "";
+  let arrowClass = "text-gray-400 text-[10px] ml-auto";
+  arrowClass += !isFolded ? " rotate-90" : "";
+
+  let drop = <></>;
+  if (!isFolded) {
+    drop = <>
+      {
+        dropdown.map(({ slug, href, description }, index) => {
+          const isLast = dropdown.length === index + 1;
+          let baseClass = "select-none cursor-pointer flex flex-row w-full items-center justify-start px-8 py-3 bg-white"
+          baseClass += isLast ? " rounded-br-[20px]" : "";
+          baseClass += page === slug ? " text-blue-900 font-bold" : "";
+
+          return (
+            <Link href={ href } key={ index }>
+              <span className={ baseClass }>
+                <GiPlainCircle className="text-[6px] text-gray-300" />
+                <div className="px-1.5" />
+                <span className="text-[12px]">{ description }</span>
+              </span>
+            </Link>
+          );
+        })
+      }
+    </>
   }
+
+  return (
+    <>
+      <span className={ baseClass } onClick={ () => setIsFolded(!isFolded) }>
+          { React.createElement(icon, { className: "text-[18px] shrink-0" }) }
+        <div className="px-1.5" />
+          <span className="text-[13px]">{ description }</span>
+          <MdArrowForwardIos className={ arrowClass } />
+      </span>
+      { drop }
+    </>
+  );
+}
+
+const Admin = () => {
   return (
     <>
       <Head>
@@ -83,66 +150,62 @@ const Home: NextPage = () => {
           <MenuItem
             icon={ props => <MdOutlineSpaceDashboard { ...props } className="text-[22px] shrink-0" /> }
             description='Dashboard'
-            href='/'
-            isSelected={ selectedKey === 0 }
-            onClick={ () => selectMenuItem(0) } />
+            href='/dashboard'
+            slug='dashboard'
+          />
           <div className="text-gray-900 text-[11px] uppercase font-bold self-start px-8 pb-2 pt-6 w-full">UI Elements
           </div>
           <MenuItem
             icon={ props => <SiDatabricks { ...props } /> }
             description='UI Elements'
-            href='/test'
-            isSelected={ selectedKey === 1 }
-            onClick={ () => selectMenuItem(1) } />
+            href='/ui-elements'
+            slug='ui-elements'
+          />
           <div className="p-[1px]"></div>
           <MenuItem
             icon={ props => <MdOpacity { ...props } /> }
             description='Charts'
-            href='/'
-            isSelected={ selectedKey === 2 }
-            onClick={ () => selectMenuItem(2) } />
+            href='/charts'
+            slug='charts'
+          />
+          <div className="p-[1px]"></div>
+          <DropdownMenuItem
+            icon={ props => <MdWeb { ...props } /> }
+            description='Form Elements'
+            slug='form-elements'
+            dropdown={ [
+              {
+                description: 'Meio de pagamento',
+                href: '/payment-method',
+                slug: 'payment-method',
+              },
+              {
+                description: 'Meio de pagamento 2',
+                href: '/payment-method2',
+                slug: 'payment-method2',
+              }
+            ] }
+          />
           <div className="text-gray-900 text-[11px] uppercase font-bold self-start px-8 pb-2 pt-6 w-full">Form and
             Datas
           </div>
-          <a
-            className="flex flex-row w-full items-center justify-start px-8 py-3"
-            href="#">
-            <MdWeb className="text-[18px]" />
-            <div className="px-1.5" />
-            <span className="text-[13px]">Form Elements</span>
-            <MdArrowForwardIos className="text-gray-400 text-[10px] ml-auto" />
-          </a>
-          <a
-            className="text-blue-900 flex flex-row w-full items-center justify-start px-8 py-3 bg-white font-bold rounded-tr-[20px]"
-            href="#">
-            <MdInsertChartOutlined className="text-[18px] shrink-0" />
-            <div className="px-1.5" />
-            {/*<span className="text-[13px]">Charts</span>*/ }
-            <span className="text-[13px] max-w-max">Icons with really big descriptions</span>
-            <MdArrowForwardIos className="text-[10px] ml-auto rotate-90 shrink-0" />
-          </a>
-          <a className="flex flex-row w-full items-center justify-start px-8 py-3 bg-white" href="#?m=ChartJs">
-            <div className="px-1.5" />
-            <GiPlainCircle className="text-[6px] text-gray-300" />
-            <div className="px-1.5" />
-            <span className="text-[12px]">ChartJs</span>
-          </a>
-          <a className="flex flex-row w-full items-center justify-start px-8 py-3 bg-white rounded-br-[20px]"
-             href="#?m=GraphJs">
-            <div className="px-1.5" />
-            <GiPlainCircle className="text-[6px] text-gray-300 shrink-0" />
-            <div className="px-1.5" />
-            {/*<span className="text-[12px] text-gray-700 hover:text-black hover:font-bold">GraphJs</span>*/ }
-            <span className="text-[13px] max-w-max hover:text-black">Meio de pagamento</span>
-          </a>
-          <a
-            className="flex flex-row w-full items-center justify-start px-8 py-3"
-            href="#">
-            <MdOpacity className="text-[18px] shrink-0" />
-            <div className="px-1.5" />
-            <span className="text-[13px] max-w-max">Icons with really big descriptions</span>
-            <MdArrowForwardIos className="text-gray-400 text-[10px] ml-auto shrink-0" />
-          </a>
+          <DropdownMenuItem
+            icon={ props => <MdWeb { ...props } /> }
+            description='Form Elements'
+            slug='form-elements'
+            dropdown={ [
+              {
+                description: 'Meio de pagamento',
+                href: '/method',
+                slug: 'method',
+              },
+              {
+                description: 'Meio de pagamento 2',
+                href: '/method2',
+                slug: 'method2',
+              }
+            ] }
+          />
         </nav>
 
 
@@ -239,4 +302,5 @@ const Home: NextPage = () => {
   )
 }
 
-export default Home
+export default Admin
+
